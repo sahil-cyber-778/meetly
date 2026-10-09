@@ -1,0 +1,43 @@
+# dependencies and builds
+node_modules/
+.next/
+dist/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+ENV/
+.env/
+.pytest_cache/
+
+# local runtime data
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.sqlite3-*
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*
+!.env.example
+
+# credentials and local deployment configuration
+*.pem
+*.key
+*.p12
+*.pfx
+.secrets/
+secrets/
+.aws/
+.vercel/
+
+# editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
