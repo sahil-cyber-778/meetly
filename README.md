@@ -4,8 +4,11 @@ Meetly is an original, Fireflies-inspired meeting workspace built for the Scaler
 
 ## What works
 
-- Search meetings by title or participant, filter by date, and sort by recency
-- Create meetings from pasted, timestamped transcript text
+- Search meetings by title or participant, apply participant/date-range filters, and sort by recency
+- Switch between meeting list and card views
+- Create meetings from pasted transcripts or uploaded TXT, VTT, and JSON files (up to 1 MB)
+- Search titles, participants, and transcript content across the workspace; jump to matching timestamps
+- Export transcripts, summaries, or full meeting notes as TXT or Markdown
 - Edit and delete meetings with persisted SQLite changes
 - View summaries, notes, participants, chapters, and speaker-labelled transcripts
 - Search a transcript with highlighted matches
@@ -45,7 +48,7 @@ Meet_AI/
 
 ## Local setup
 
-Prerequisites: Node.js 20+, npm 10+, and Python 3.11+.
+Prerequisites: Node.js 22.18+ (for the TypeScript test runner), npm 10+ or pnpm, and Python 3.11+.
 
 ### Backend
 
@@ -58,7 +61,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-The API is available at `http://localhost:8000`; interactive docs are at `http://localhost:8000/docs`. SQLite is created automatically at `backend/meetings.db`, and the demo meetings are seeded only when the database is empty.
+The API is available at `http://localhost:8000`; interactive docs are at `http://localhost:8000/docs`. SQLite is created automatically at `backend/meetings.db`. Demo meetings are seeded only when the meetings table is first created; deleting all meetings does not reseed them. Set `SEED_DEMO=false` to disable initial seeding. SQLite foreign keys are enforced.
 
 ### Frontend
 
@@ -75,8 +78,12 @@ Open `http://localhost:3000`.
 
 ```bash
 cd backend && pytest -q
-cd frontend && npm run typecheck && npm run build
+cd frontend && npm run test && npm run typecheck && npm run build
 ```
+
+Backend tests use temporary SQLite files and never modify the working database. Playback tests cover segment boundaries, silent gaps, and invalid seek times.
+
+For browser tests, start separate QA servers: backend on port 8001 with `DATABASE_URL=sqlite:///./qa.db` and `CORS_ORIGINS=http://localhost:3001`; frontend on port 3001 with `NEXT_PUBLIC_API_URL=http://127.0.0.1:8001/api` and `NEXT_BUILD_DIR=.next-qa`. Use a fresh QA database for the full seeded workflow. With Chrome installed, run `npm run test:e2e` or `npm run test:e2e -- --timestamp-only` for the focused search-navigation regression. The test creates and deletes only its own temporary meeting. Override `E2E_BROWSER`, `E2E_BASE_URL`, and `E2E_API_URL` if needed.
 
 ## Database schema
 
@@ -94,6 +101,7 @@ Every child record has a foreign key to `meetings`. SQLAlchemy relationships use
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Deployment health check |
+| `GET` | `/api/search?q=...` | Search titles, people, and transcript segments with timestamps |
 | `GET` | `/api/meetings` | List/search/filter/sort meetings |
 | `POST` | `/api/meetings` | Create a meeting and parse transcript text |
 | `GET` | `/api/meetings/{id}` | Return the complete meeting workspace |
@@ -102,8 +110,9 @@ Every child record has a foreign key to `meetings`. SQLAlchemy relationships use
 | `POST` | `/api/meetings/{id}/action-items` | Add an action item |
 | `PATCH` | `/api/meetings/{id}/action-items/{itemId}` | Edit or complete an action item |
 | `DELETE` | `/api/meetings/{id}/action-items/{itemId}` | Delete an action item |
+| `GET` | `/api/meetings/{id}/export` | Download TXT or Markdown; parameters: `format=txt\|md`, `content=all\|transcript\|summary` |
 
-`GET /api/meetings` supports `search`, `date_from`, `date_to`, and `sort=newest|oldest` query parameters.
+`GET /api/meetings` supports `search`, `participant`, `date_from`, `date_to`, and `sort=newest|oldest`. Creating a meeting accepts `transcript_format=txt|vtt|json` and `transcript_text`; the browser reads the selected file and sends its contents to the backend for validation and persistence. JSON accepts a segment array or `{ "segments": [...] }`, with `speaker`, `text`, `start_time`, and optional `end_time`. VTT supports voice tags and cue gaps. Timestamps must be ordered without overlaps and fit within the entered meeting duration.
 
 ## Deployment
 
@@ -127,6 +136,7 @@ SQLite must live on the attached volume; storing it only in the deploy filesyste
 
 - Playback is deliberately simulated; no audio/video asset is required by the assignment.
 - A transcript line may use `[MM:SS] Speaker: text`. Untimestamped lines are distributed across the entered duration and assigned to participants in order.
-- Authentication, external AI APIs, speech-to-text, calendar integrations, and exports are intentionally out of scope.
-- The original assignment PDF referenced in the supplied brief was not present in the attachment; the detailed pasted requirements were treated as authoritative.
+- Authentication, external AI APIs, speech-to-text, calendar integrations, and team collaboration are intentionally represented as permitted placeholders.
+- Seeded summaries are mocked. New transcripts use an editable extractive overview from their first three segments; this does not call an AI service.
+- The original Scaler assignment PDF was reviewed as the primary specification. Submission requires both a public repository URL and a working hosted demo URL. Deployment configuration is provided; a hosted demo must still be verified and supplied before submission. Improvements are kept on `feature/improvements` without automatically merging or deploying to production.
 

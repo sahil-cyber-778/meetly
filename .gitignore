@@ -1,6 +1,7 @@
 # dependencies and builds
 node_modules/
 .next/
+.next-qa/
 dist/
 __pycache__/
 *.py[cod]
@@ -34,6 +35,8 @@ ENV/
 secrets/
 .aws/
 .vercel/
+test-results/
+playwright-report/
 
 # editors and OS
 .DS_Store

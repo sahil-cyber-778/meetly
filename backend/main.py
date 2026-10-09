@@ -7,13 +7,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import Base, SessionLocal, engine
 from routers.meetings import router as meetings_router
 from seed import seed_database
+from routers.search import router as search_router
+from sqlalchemy import inspect
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    first_run = not inspect(engine).has_table('meetings')
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
-        seed_database(db)
+        if first_run and os.getenv("SEED_DEMO", "true").lower() == "true":
+            seed_database(db)
     yield
 
 
@@ -27,6 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(meetings_router)
+app.include_router(search_router)
 
 
 @app.get("/api/health")
