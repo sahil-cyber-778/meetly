@@ -118,19 +118,23 @@ Every child record has a foreign key to `meetings`. SQLAlchemy relationships use
 
 ### Backend on Railway
 
-1. Create a Railway service from this repository and set the root directory to `backend`.
+1. Create a Railway service from this repository on branch `main` and set the root directory to `/backend`. If using a config-file path, set it explicitly to `/backend/railway.json`; Railway does not infer that path from the root directory.
 2. Attach a persistent volume, for example at `/data`.
 3. Set `DATABASE_URL=sqlite:////data/meetings.db`.
 4. Set `CORS_ORIGINS=https://your-frontend.vercel.app` (comma-separated values are accepted).
-5. Railway uses `railway.json` to launch Uvicorn and check `/api/health`.
+5. Select Railpack (Python is pinned to 3.12 in `.python-version`). Set the start command to `uvicorn main:app --host 0.0.0.0 --port $PORT` and healthcheck path to `/api/health`; these are also declared in `railway.json`. Railway supplies `PORT`. Keep one service replica for this SQLite deployment.
+6. Generate a public HTTPS domain and verify `/api/health` and `/api/meetings`. `SEED_DEMO=true` is optional (the default) and seeds only a new database.
+
+Railway's legacy `railway.json` format is deprecated. For new services, configure the same build/start/healthcheck settings in the dashboard if the legacy config is not consumed; verify the effective settings in the deployment details. Existing legacy services require migration before December 1, 2026.
 
 SQLite must live on the attached volume; storing it only in the deploy filesystem would lose changes on redeploy. A hosted PostgreSQL URL can be supplied later without changing the ORM models.
 
 ### Frontend on Vercel
 
-1. Import the repository and select `frontend` as the root directory.
+1. Import the repository, use production branch `main`, and select `frontend` as the root directory with the Next.js framework preset. Use Node.js 22.x.
 2. Set `NEXT_PUBLIC_API_URL=https://your-backend.up.railway.app/api`.
-3. Deploy with the standard Next.js preset.
+3. Keep dependency installation automatic (Vercel detects `pnpm-lock.yaml`). Set build command to `pnpm run build` and keep the default output directory. Leave `NEXT_BUILD_DIR` unset.
+4. Deploy, then set Railway's `CORS_ORIGINS` to this exact frontend origin (no trailing slash) and redeploy the backend. Changing `NEXT_PUBLIC_API_URL` requires a new frontend build. Add preview origins explicitly if testing Vercel previews.
 
 ## Assumptions
 
@@ -138,5 +142,5 @@ SQLite must live on the attached volume; storing it only in the deploy filesyste
 - A transcript line may use `[MM:SS] Speaker: text`. Untimestamped lines are distributed across the entered duration and assigned to participants in order.
 - Authentication, external AI APIs, speech-to-text, calendar integrations, and team collaboration are intentionally represented as permitted placeholders.
 - Seeded summaries are mocked. New transcripts use an editable extractive overview from their first three segments; this does not call an AI service.
-- The original Scaler assignment PDF was reviewed as the primary specification. Submission requires both a public repository URL and a working hosted demo URL. Deployment configuration is provided; a hosted demo must still be verified and supplied before submission. Improvements are kept on `feature/improvements` without automatically merging or deploying to production.
+- The original Scaler assignment PDF was reviewed as the primary specification. Submission requires both a public repository URL and a working hosted demo URL. The verified improvements have been merged into `main` for deployment; a hosted demo must still be verified and supplied before submission.
 
